@@ -6,9 +6,11 @@ This workflow allows teachers to generate AI-powered lesson plans directly from 
 
 Features
 AI Lesson Plan Generator
-Generates structured lesson plans using OpenAI
-Produces competency-based outputs
-Creates:
+
+Generates structured lesson plans using OpenAI.
+
+Produces competency-based outputs:
+
 Objectives
 Lesson flow
 Assessment questions
@@ -111,3 +113,6 @@ Nodes
 AI Agent
 OpenAI Chat Model
 parse_code
+Summary
+
+This workflow automates the entire lesson planning process from Messenger input → AI generation → Google Docs creation → file delivery, making it a complete AI teaching assistant system for educators.
