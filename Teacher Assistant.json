@@ -1,0 +1,188 @@
+{
+  "name": "Teacher Assistant Full",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('lesson_topic').item.json.Lesson }}",
+        "options": {
+          "systemMessage": "=You are an AI assistant that generates structured content for a Google Docs template.\n\nSTRICT RULES:\n- Output MUST be valid JSON.\n- DO NOT include explanations, introductions, or extra text.\n- DO NOT use markdown.\n- DO NOT wrap output in code blocks.\n- DO NOT add commentary.\n- DO NOT include trailing commas.\n- Ensure all brackets and quotes are properly closed.\n\nOUTPUT BEHAVIOR:\n- Each TOPIC must be output separately.\n- If multiple topics exist, return them as separate JSON objects in an array.\n\nFORMAT RULE (MANDATORY):\nReturn ONLY valid JSON in this structure:\n\n[\n  {\n    \"lessonName\": \"{{ $json.chatInput }}\",\n    \"competency\": \"\",\n    \"objectives\": \"\",\n    \"context\": \"\",\n    \"prelesson\": \"\",\n    \"flow\": \"\",\n    \"resources\": \"\",\n    \"integration\": \"\",\n    \"assessment\": \"\",\n    \"extended\": \"\",\n    \"reflections\": \"\"\n  }\n]\n\nCONTENT RULES:\n- \"objectives\" must be bullet-style text in a single string using \"•\"\n- \"flow\" must be step-by-step bullets and another line every entry\n- Keep all fields concise and suitable for a table cell\n- Do not leave any field empty\n\nSTRICT OUTPUT REQUIREMENT:\n- Output must start with [ and end with ]\n- No text before or after JSON"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-432, 48],
+      "id": "96a96c21-6106-44c4-bd4a-f397f3b999bc",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [-432, 272],
+      "id": "9f271e8b-8632-4a39-bdc8-55ffd9f7109b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Get a document in Google Docs",
+        "operation": "get",
+        "documentURL": "={{ $env.GOOGLE_DOC_TEMPLATE_ID }}"
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [-304, 272],
+      "id": "8b5426fa-d5d2-43cd-ba71-8a96a449bf64",
+      "name": "Get a document in Google Docs",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [368, 48],
+      "id": "53a88723-75c6-4cfb-b40a-5101a242249f",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.documentId }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [592, 48],
+      "id": "ed7d392f-6b25-4b26-bc72-107b9ef5583e",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{$env.GOOGLE_DOC_TEMPLATE_ID}}/copy",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.lessonName }}\"\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [144, 48],
+      "id": "1a794eca-fc96-4921-9cfa-95342fbb4278",
+      "name": "createFile",
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "",
+          "name": "Google account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "teacher-assistant",
+        "responseMode": "responseNode"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-656, -736],
+      "id": "2d7dd444-6a5c-4b24-a3af-69ea4cb2c435",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.query['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $json.query['hub.verify_token'] }}",
+              "rightValue": "={{ $env.VERIFY_TOKEN }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-432, -880],
+      "id": "09b59d28-3c32-46cb-a1f8-f3c3458f4e9d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v25.0/{{ $('Webhook').item.json.body.entry[0].id }}/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FACEBOOK_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [480, -496],
+      "id": "6dc0fc43-8c2a-46cd-a26e-886edf07f909",
+      "name": "conversation_reply"
+    }
+  ],
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
